@@ -15,6 +15,7 @@ angular.module(MODULE_NAME, [])
       infiniteScrollDisabled: '=',
       infiniteScrollUseDocumentBottom: '=',
       infiniteScrollListenForEvent: '@',
+      infiniteScrollUp: '&',
     },
 
     link(scope, elem, attrs) {
@@ -98,6 +99,41 @@ angular.module(MODULE_NAME, [])
         }
       }
 
+      function handlerUp() {
+        // let containerBottom;
+        // let elementBottom;
+        let containerTopOffset;
+
+        if (container === windowElement) {
+          // containerBottom = height(container) + pageYOffset(container[0].document.documentElement
+          // elementBottom = offsetTop(elem) + height(elem);
+        } else {
+          // containerBottom = 0;
+
+          containerTopOffset = container[0].scrollTop;
+          // elementBottom = container[0].scrollHeight;
+        }
+        if (useDocumentBottom) {
+          // elementBottom = height((elem[0].ownerDocument || elem[0].document).documentElement);
+        }
+        const remaining = containerTopOffset;
+        const shouldScroll = remaining <= height(container) * (scrollDistance + 1);
+
+        if (shouldScroll) {
+          checkWhenEnabled = true;
+          if (scrollEnabled) {
+            if (scope.$$phase || $rootScope.$$phase) {
+              scope.infiniteScrollUp();
+            } else {
+              scope.$apply(scope.infiniteScrollUp);
+            }
+          }
+        } else {
+          if (checkInterval) { $interval.cancel(checkInterval); }
+          checkWhenEnabled = false;
+        }
+      }
+
       // The optional THROTTLE_MILLISECONDS configuration value specifies
       // a minimum time that should elapse between each call to the
       // handler. N.b. the first call the handler will be run
@@ -131,9 +167,11 @@ angular.module(MODULE_NAME, [])
         return throttled;
       }
 
+      const handlerInUse = ('infiniteScrollUp' in attrs) ? handlerUp : defaultHandler;
       const handler = (THROTTLE_MILLISECONDS != null) ?
-        throttle(defaultHandler, THROTTLE_MILLISECONDS) :
-        defaultHandler;
+        throttle(handlerInUse, THROTTLE_MILLISECONDS) :
+          handlerInUse;
+
 
       function handleDestroy() {
         container.unbind('scroll', handler);
